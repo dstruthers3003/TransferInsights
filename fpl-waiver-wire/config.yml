@@ -1,0 +1,68 @@
+# Paisley & District Draft
+league_id: 27214
+entry_id: 141674
+
+# Leave blank to use every gameweek the API publishes fixtures for, which is
+# a rolling window of about three. A number here trims it shorter.
+horizon:
+
+# Ignore free agents below this many minutes. They project at little more than
+# the position baseline anyway, and including them makes the run slower for no
+# useful output.
+min_minutes: 45
+
+# Discard claims worth less than this across the horizon, and keep at most
+# this many. Claims sharing a drop are alternatives, not additions, so only
+# a couple of fallbacks per drop are kept.
+min_gain: 0.4
+max_claims: 8
+max_per_drop: 2
+
+# How much to trust each signal. Must sum to 1.
+#   season      points per game so far. Stable, slow to react.
+#   form        last few gameweeks. Fast, noisy.
+#   underlying  xGI per 90. Leads actual returns, catching players about to
+#               come good before the points show up.
+weights:
+  season: 0.35
+  form: 0.30
+  underlying: 0.35
+
+# Points per expected goal involvement, by position. Blended rates rather than
+# pure goal values, since assists are flat at three for everyone.
+xgi_to_points:
+  GKP: 4.0
+  DEF: 5.0
+  MID: 4.5
+  FWD: 4.0
+
+# Baseline for turning up and playing an hour.
+appearance_points: 2.0
+
+# Starts needed before a player's own rate is trusted over the baseline.
+# Higher is more sceptical of hot starts.
+shrinkage_starts: 5
+
+# What an unremarkable starter in each position returns per appearance.
+position_baseline:
+  GKP: 3.0
+  DEF: 3.2
+  MID: 3.3
+  FWD: 3.4
+
+# How far each position swings on the opposition. Defenders live and die by
+# clean sheets, so they feel opposition quality more than forwards do.
+fdr_swing:
+  GKP: 0.35
+  DEF: 0.35
+  MID: 0.22
+  FWD: 0.18
+
+# Fixture adjustment is clamped to this range, and shrunk toward neutral until
+# this many gameweeks have been played.
+fdr_floor: 0.6
+fdr_ceiling: 1.4
+fdr_confidence_gws: 6
+
+# Applied to players flagged doubtful where no percentage is given.
+doubtful_penalty: 0.5
