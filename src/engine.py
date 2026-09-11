@@ -45,6 +45,8 @@ class Player:
     status: str
     chance: int | None
     news: str
+    recent_starts: list[int] = field(default_factory=list)   # oldest to newest
+    recent_minutes: list[int] = field(default_factory=list)  # oldest to newest
     start_prob: float = 0.0
     rate: float = 0.0
     proj: list[float] = field(default_factory=list)
@@ -116,22 +118,74 @@ def fixture_multiplier(strength: dict, opp_id: int, pos: int, cfg: dict, confide
 # --- per-player numbers -----------------------------------------------------
 
 
+def _weights(n: int, decay: float) -> list[float]:
+    """Oldest to newest, each older gameweek worth `decay` times the next."""
+    return [decay ** (n - 1 - i) for i in range(n)]
+
+
+def _decay_for(pos: int, cfg: dict) -> float:
+    """How fast old gameweeks stop mattering, by position.
+
+    Goalkeepers get a much sharper decay than outfielders, because the
+    position works differently. A keeper is either the first choice or he is
+    not; managers hand over the gloves and then leave them alone, so a keeper
+    who has started the last two games is the number one and what happened
+    before the change tells you nothing. Outfielders are genuinely rotated, so
+    their history deserves more weight.
+    """
+    per = cfg.get("recency_decay_by_position") or {}
+    return per.get(POSSHORT[pos], cfg["recency_decay"])
+
+
 def start_probability(p: Player, played: int, cfg: dict) -> float:
     """How likely this player is to be on the pitch, in [0, 1].
 
     Hard flags come first because they are real information. Otherwise the
-    estimate is the higher of start share and minutes share. Start count alone
-    returns exactly zero for anyone yet to start, which declares a fit squad
-    player worthless and inflates the value of replacing him by a full horizon
-    of the candidate's rate.
+    estimate comes from per-gameweek history, weighted so that recent weeks
+    count for far more than old ones.
+
+    Two things drove this design.
+
+    Starts are the signal, not minutes. A striker who starts every week and is
+    replaced on the hour plays about 55 minutes a game; scoring him on minutes
+    share would read 60% and badly undervalue a nailed-on starter. Whether he
+    was in the eleven is the thing that matters.
+
+    But minutes still matter as a floor, because a regular substitute is worth
+    more than nothing. So the estimate is the higher of weighted starts and
+    weighted minutes share.
+
+    Weighting the tail is what separates "not yet" from "not any more". A
+    keeper signed last month who was an unused substitute for his first
+    gameweek and has started every one since is not a 67% starter, but a
+    season average cannot tell that apart from a player who has just been
+    dropped. Those are opposite signals with identical averages.
+
+    Gameweeks a player was not registered for are absent from the history
+    rather than recorded as zero, so a mid-season signing is judged on the
+    games he could actually have played.
+
+    Falls back to season totals when no per-gameweek history is available,
+    taking the higher of start share and minutes share so that a fit player
+    yet to start is never valued at exactly zero.
     """
     if p.status in ("i", "s", "u"):
         return 0.0
     if p.chance is not None:
         return p.chance / 100.0
 
-    played = max(played, 1)
-    rate = min(max(p.starts / played, p.minutes / (90.0 * played)), 1.0)
+    if p.recent_starts:
+        w = _weights(len(p.recent_starts), _decay_for(p.pos, cfg))
+        total = sum(w)
+        by_starts = sum(x * min(s, 1) for x, s in zip(w, p.recent_starts)) / total
+        mins = p.recent_minutes or [0] * len(p.recent_starts)
+        by_minutes = sum(x * min(m / 90.0, 1.0) for x, m in zip(w, mins)) / total
+        rate = max(by_starts, by_minutes)
+    else:
+        played = max(played, 1)
+        rate = max(p.starts / played, p.minutes / (90.0 * played))
+
+    rate = min(rate, 1.0)
     if p.status == "d":
         rate *= cfg["doubtful_penalty"]
     return round(rate, 2)

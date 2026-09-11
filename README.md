@@ -74,8 +74,32 @@ gaudy average built on nothing; without shrinkage those players dominate the
 list. The pull is negligible by about ten starts.
 
 **Start probability** takes the availability flag and percentage where the
-game gives one, otherwise the higher of start share and minutes share. Anyone
-flagged injured or suspended is zero and never appears as a claim.
+game gives one, otherwise per-gameweek history from `event/{n}/live`, weighted
+so recent weeks count for far more. Anyone flagged injured or suspended is zero
+and never appears as a claim.
+
+Two design points worth knowing:
+
+*Starts are the signal, not minutes.* A striker who starts every week and is
+replaced on the hour averages about 55 minutes; scoring him on minutes share
+reads 60% and badly undervalues a certain starter. Minutes are kept only as a
+floor, so a regular substitute is not valued at nothing.
+
+*Goalkeepers are weighted differently.* The position is close to binary: a
+keeper is either first choice or he is not, and once a manager hands over the
+gloves they tend to stay handed over. Outfielders are genuinely rotated. So
+keepers get a much sharper decay, and a keeper who has started the last two
+games reads as the number one rather than a two-thirds starter. Same history
+in midfield does not, correctly.
+
+*Mid-season signings are judged only on games they could have played.* The
+live payload grows as players are registered, so a signing is simply absent
+from earlier gameweeks rather than recorded as having missed them.
+
+*Weighting the tail separates "not yet" from "not any more".* A keeper signed
+last month who was an unused substitute for his first gameweek and has started
+every one since has exactly the same season average as someone just dropped.
+Opposite signals, identical averages. Weighted, they come out at 86% and 12%.
 
 **Fixture** is derived, because the Draft API publishes no difficulty ratings
 and no team strength. A team's attack is its squad's total expected goals; its

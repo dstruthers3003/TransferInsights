@@ -66,3 +66,29 @@ fdr_confidence_gws: 6
 
 # Applied to players flagged doubtful where no percentage is given.
 doubtful_penalty: 0.5
+
+# Per-gameweek history. Availability is estimated from the last
+# `recency_window` gameweeks, each older one worth `recency_decay` times the
+# next. At 0.5 over five gameweeks the most recent is worth sixteen times the
+# oldest, so a player who has just won or lost his place is reflected almost
+# immediately rather than being averaged away across a season.
+#
+# Starts drive the estimate rather than minutes, because a striker who starts
+# every week and comes off on the hour is a certain starter, not a 60% one.
+# Minutes act as a floor so regular substitutes are not valued at zero.
+recency_window: 5
+recency_decay: 0.5
+
+# Decay by position, overriding recency_decay above.
+#
+# Goalkeeper is deliberately much sharper. The position is close to binary:
+# a keeper is either first choice or he is not, and once a manager hands over
+# the gloves they tend to stay handed over. A keeper who has started the last
+# two games is the number one, and what happened before the change tells you
+# very little. Outfielders are genuinely rotated, so their history is worth
+# more.
+recency_decay_by_position:
+  GKP: 0.20
+  DEF: 0.50
+  MID: 0.50
+  FWD: 0.50

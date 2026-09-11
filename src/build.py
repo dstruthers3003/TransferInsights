@@ -37,7 +37,7 @@ def load_config(path: str) -> dict:
     return cfg
 
 
-def build_players(boot: dict, status: dict, played: int) -> list[Player]:
+def build_players(boot: dict, status: dict, played: int, history: dict | None = None) -> list[Player]:
     short_of = {t["id"]: t["short_name"] for t in boot["teams"]}
     owners = {e["element"]: e["owner"] for e in status["element_status"]}
 
@@ -63,6 +63,8 @@ def build_players(boot: dict, status: dict, played: int) -> list[Player]:
                 status=e.get("status", "a"),
                 chance=e.get("chance_of_playing_next_round"),
                 news=(e.get("news") or "")[:90],
+                recent_starts=(history or {}).get(e["id"], {}).get("starts", []),
+                recent_minutes=(history or {}).get(e["id"], {}).get("minutes", []),
             )
         )
     return players
@@ -192,7 +194,16 @@ def main() -> int:
     if cfg.get("horizon"):
         events = events[: cfg["horizon"]]
 
-    players = build_players(boot, status, played)
+    # per-gameweek history, so "not yet" can be told from "not any more"
+    history = {}
+    if played:
+        try:
+            history = api.recent_form(played, cfg.get("recency_window", 5))
+        except RuntimeError as exc:
+            print(f"warning: no per-gameweek history ({exc}); "
+                  "falling back to season averages", file=sys.stderr)
+
+    players = build_players(boot, status, played, history)
     strength = team_strength(boot["elements"], boot["teams"], played)
     short_of = {t["id"]: t["short_name"] for t in boot["teams"]}
     opponents = build_opponents(boot.get("fixtures") or {}, events, short_of)

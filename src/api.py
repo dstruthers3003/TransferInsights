@@ -54,6 +54,50 @@ def element_status(league_id: int) -> dict:
     return _get(f"league/{league_id}/element-status")
 
 
+def event_live(event: int) -> dict[int, dict]:
+    """Minutes and starts for every player in one gameweek.
+
+    One call covers the whole league, which is what makes per-gameweek history
+    affordable: a five-gameweek window costs five requests, not one per player.
+    """
+    data = _get(f"event/{event}/live")
+    out: dict[int, dict] = {}
+    for pid, payload in (data.get("elements") or {}).items():
+        stats = payload.get("stats") or {}
+        out[int(pid)] = {
+            "minutes": stats.get("minutes", 0) or 0,
+            "starts": stats.get("starts", 0) or 0,
+        }
+    return out
+
+
+def recent_form(upto_event: int, window: int) -> dict[int, dict]:
+    """Per-player minutes and starts over the last `window` gameweeks.
+
+    Ordered oldest to newest so the caller can weight the tail more heavily.
+    A gameweek that errors is skipped rather than failing the run - a shorter
+    history degrades the estimate without breaking it.
+
+    Players are only recorded for gameweeks they actually appear in. The live
+    payload grows as the season goes on, because players are added when they
+    are registered, so a mid-season signing is simply absent from earlier
+    gameweeks. Recording those as zeros would mark him down for games he could
+    not have played; leaving them out judges him on the ones he could.
+    """
+    first = max(upto_event - window + 1, 1)
+    history: dict[int, dict] = {}
+    for ev in range(first, upto_event + 1):
+        try:
+            live = event_live(ev)
+        except RuntimeError:
+            continue
+        for pid, rec in live.items():
+            slot = history.setdefault(pid, {"minutes": [], "starts": []})
+            slot["minutes"].append(rec["minutes"])
+            slot["starts"].append(rec["starts"])
+    return history
+
+
 def fixture_events(bootstrap_data: dict) -> list[int]:
     """Gameweeks with fixtures published, oldest first.
 

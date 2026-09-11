@@ -36,6 +36,7 @@ def mk(el, pos, quality, owner, **kw):
         minutes=kw.get("minutes", 270), starts=kw.get("starts", 3),
         xgi90=kw.get("xgi", round(max(quality / 12, 0), 2)),
         status=kw.get("status", "a"), chance=kw.get("chance"), news=kw.get("news", ""),
+        recent_starts=kw.get("rs", []), recent_minutes=kw.get("rm", []),
     )
 
 
@@ -57,7 +58,28 @@ def world():
     players.append(mk(el, 3, 8.0, None, name="Injured Trap", status="i", chance=0,
                       news="Knee injury", team=2)); el += 1
     players.append(mk(el, 3, 6.0, None, name="Too Few Minutes", minutes=20, starts=0, team=3)); el += 1
-    players.append(mk(el, 2, 2.0, ME, name="Fringe Sub", minutes=25, starts=0, team=4))
+    players.append(mk(el, 2, 2.0, ME, name="Fringe Sub", minutes=25, starts=0, team=4)); el += 1
+
+    # the three cases the per-gameweek history exists to separate. All three
+    # have similar season totals; only the ordering differs.
+    players.append(mk(el, 1, 4.0, None, name="Just Signed", minutes=180, starts=2,
+                      team=5, rs=[0,0,0,1,1], rm=[0,0,0,90,90])); el += 1
+    players.append(mk(el, 1, 4.0, None, name="Just Dropped", minutes=180, starts=2,
+                      team=6, rs=[1,1,0,0,0], rm=[90,90,0,0,0])); el += 1
+    players.append(mk(el, 4, 4.0, None, name="Always Subbed Off", minutes=280, starts=5,
+                      team=7, rs=[1,1,1,1,1], rm=[55,67,45,58,55])); el += 1
+
+    # a keeper eased in: benched once, then handed the gloves. Keepers are not
+    # rotated the way outfielders are, so two starts settles it.
+    players.append(mk(el, 1, 4.0, None, name="New Number One", minutes=180, starts=2,
+                      team=8, rs=[0,1,1], rm=[0,90,90])); el += 1
+    # identical history in an outfield position must NOT read as certain
+    players.append(mk(el, 3, 4.0, None, name="Outfield Same Shape", minutes=180, starts=2,
+                      team=9, rs=[0,1,1], rm=[0,90,90])); el += 1
+    # a signing who arrived before the last gameweek: no history for the weeks
+    # he was not registered, rather than zeros
+    players.append(mk(el, 2, 4.0, None, name="Just Arrived", minutes=90, starts=1,
+                      team=10, rs=[1], rm=[90]))
     return players
 
 
