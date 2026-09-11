@@ -119,6 +119,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .refreshbtn.stale,.refreshbtn.stale:hover{color:#0A2B18}
 .refreshbtn.stale:hover{background:#2BFF9B}
 .refreshbtn.stale #refreshAge{opacity:.8}
+.refreshbtn.busy{opacity:.6;pointer-events:none}
 @media(max-width:640px){.refreshbtn{padding:6px 12px}.refreshbtn #refreshAge{display:none}}
 
 nav.tabs{position:sticky;top:59px;z-index:40;background:var(--plnav);border-bottom:0}
@@ -243,6 +244,25 @@ td.who .team{display:flex;align-items:center;gap:7px}
 .benchlab{font-size:10px;text-transform:uppercase;letter-spacing:.09em;
   font-weight:600;color:var(--muted);width:100%;text-align:center;margin-bottom:2px}
 
+.tie-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px}
+.tie-side{min-width:0}
+.tie-side .who2{font-size:16px;font-weight:700;letter-spacing:-.01em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tie-side .mgr2{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tie-side.them{text-align:right}
+.tie-score{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tie-score .sep{color:var(--faint);font-weight:500;margin:0 6px;font-size:22px}
+.tie-score .lead{color:var(--good)}
+.tie-score .trail{color:var(--bad)}
+.tie-verdict{grid-column:1/-1;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);
+  font-size:13px;color:var(--ink-2)}
+.tie-verdict b{color:var(--ink)}
+@media(max-width:520px){
+  .tie-head{grid-template-columns:1fr auto 1fr;gap:8px}
+  .tie-side .who2{font-size:13.5px;white-space:normal}
+  .tie-score{font-size:23px}
+}
+
 .seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:100px;overflow:hidden;background:var(--surface)}
 .seg button{border:0;border-radius:0;padding:6px 14px;font-size:12.5px;background:transparent}
 .seg button[aria-pressed="true"]{background:#37003C;color:#fff}
@@ -357,6 +377,7 @@ code.k{font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:
   <div class="wrap tabs-in" role="tablist">
     <button class="tab" role="tab" data-tab="claims" aria-selected="true">Claims</button>
     <button class="tab" role="tab" data-tab="xi" aria-selected="false">Best XI</button>
+    <button class="tab" role="tab" data-tab="opp" aria-selected="false">Opponent</button>
     <button class="tab" role="tab" data-tab="squad" aria-selected="false">My Squad</button>
     <button class="tab" role="tab" data-tab="method" aria-selected="false">Method</button>
     <button class="tab" role="tab" data-tab="data" aria-selected="false">Data</button>
@@ -415,6 +436,37 @@ code.k{font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:
         <p class="small" style="margin:0 0 10px">Shapes within a couple of tenths of each other are indistinguishable &mdash; the projection will be wrong by far more than that. Pick whichever you prefer.</p>
         <div class="tw"><table id="tblShapes"></table></div>
       </div>
+    </div>
+  </section>
+
+  <!-- ============ OPPONENT ============ -->
+  <section class="panel" id="p-opp" hidden>
+    <div class="section-head"><h2>The fixture</h2><span class="note" id="oppNote"></span></div>
+    <p class="lead">Who you are drawn against, the side they would field, and where the tie is projected to land. Their eleven is picked by the same optimiser as yours, so it is their best available team rather than whatever they last set.</p>
+    <div class="row" style="margin-bottom:14px">
+      <div style="flex:0 1 200px"><label class="f" for="oppGw">Gameweek</label><select id="oppGw"></select></div>
+    </div>
+
+    <div class="card" id="oppScoreCard" style="margin-bottom:16px">
+      <div class="card-head"><h3 id="oppTitle">&mdash;</h3><span class="meta" id="oppShape"></span></div>
+      <div class="card-body"><div class="tie-head" id="oppScore"></div></div>
+    </div>
+
+    <div class="banner" id="oppBanner" hidden style="margin-bottom:16px"></div>
+
+    <div class="card" id="oppSideCard">
+      <div class="card-head"><h3>Their eleven</h3><span class="meta" id="oppMeta"></span>
+        <div class="spacer" style="flex:1"></div>
+        <div class="seg" role="group" aria-label="View">
+          <button id="oppViewPitch" aria-pressed="true">Pitch</button>
+          <button id="oppViewList" aria-pressed="false">List</button>
+        </div>
+      </div>
+      <div id="oppPitchWrap">
+        <div class="pitch" id="oppPitch"></div>
+        <div class="benchstrip" id="oppBench"></div>
+      </div>
+      <div id="oppListWrap" hidden><div class="tw"><table id="tblOpp"></table></div></div>
     </div>
   </section>
 
@@ -488,7 +540,7 @@ code.k{font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:
 
 <div class="toast" id="toast"></div>
 
-<script type="application/json" id="seedData">{"v":1,"generated":"2026-09-10T19:55:00Z","leagueId":27214,"leagueName":"Paisley & District Draft","entryId":141674,"teamName":"Team Name","manager":"David Struthers","gwPlayed":3,"nextEvent":4,"EV":[4,5,6],"deadline":"2026-09-12T12:30:00Z","baseline":100.1,"baseGW":{"4":32.7,"5":34.0,"6":33.4},"pool":{"total":653,"owned":135,"free":518,"considered":171},"claims":[{"gain":12.36,"per":{"4":3.91,"5":4.31,"6":4.14},"add":{"n":"Ajayi","tn":"HUL","pos":2,"mp":1.0,"rate":4.41,"mins":243,"starts":3,"ppg":8.3,"form":8.3,"xgi":0.19,"h":13.5,"news":"","fx":[[{"o":"CHE","h":0}],[{"o":"NEW","h":0}],[{"o":"EVE","h":1}]]},"drop":{"n":"Hincapie","tn":"ARS","pos":2,"mp":0.12,"h":1.1}},{"gain":12.01,"per":{"4":4.23,"5":3.96,"6":3.82},"add":{"n":"Bogle","tn":"LEE","pos":2,"mp":1.0,"rate":4.29,"mins":217,"starts":3,"ppg":7.3,"form":7.3,"xgi":0.39,"h":13.2,"news":"","fx":[[{"o":"NEW","h":1}],[{"o":"CRY","h":1}],[{"o":"ARS","h":0}]]},"drop":{"n":"Hincapie","tn":"ARS","pos":2,"mp":0.12,"h":1.1}},{"gain":11.88,"per":{"4":3.98,"5":4.04,"6":3.86},"add":{"n":"Scott","tn":"BOU","pos":3,"mp":1.0,"rate":4.4,"mins":266,"starts":3,"ppg":8.0,"form":8.0,"xgi":0.21,"h":13.0,"news":"","fx":[[{"o":"BRE","h":1}],[{"o":"LIV","h":1}],[{"o":"CHE","h":0}]]},"drop":{"n":"Madueke","tn":"ARS","pos":3,"mp":0.09,"h":0.9}},{"gain":11.53,"per":{"4":3.65,"5":4.02,"6":3.86},"add":{"n":"Egan","tn":"HUL","pos":2,"mp":1.0,"rate":4.14,"mins":270,"starts":3,"ppg":7.7,"form":7.7,"xgi":0.0,"h":12.7,"news":"","fx":[[{"o":"CHE","h":0}],[{"o":"NEW","h":0}],[{"o":"EVE","h":1}]]},"drop":{"n":"Diomande","tn":"NFO","pos":2,"mp":0.0,"h":0.0}},{"gain":11.33,"per":{"4":3.79,"5":3.69,"6":3.85},"add":{"n":"King","tn":"FUL","pos":3,"mp":1.0,"rate":4.11,"mins":270,"starts":3,"ppg":6.3,"form":6.3,"xgi":0.43,"h":12.5,"news":"","fx":[[{"o":"LIV","h":0}],[{"o":"MUN","h":1}],[{"o":"IPS","h":0}]]},"drop":{"n":"Madueke","tn":"ARS","pos":3,"mp":0.09,"h":0.9}},{"gain":10.92,"per":{"4":3.46,"5":3.81,"6":3.65},"add":{"n":"Giles","tn":"HUL","pos":2,"mp":1.0,"rate":3.94,"mins":264,"starts":3,"ppg":6.7,"form":6.7,"xgi":0.07,"h":12.1,"news":"","fx":[[{"o":"CHE","h":0}],[{"o":"NEW","h":0}],[{"o":"EVE","h":1}]]},"drop":{"n":"Diomande","tn":"NFO","pos":2,"mp":0.0,"h":0.0}},{"gain":9.15,"per":{"4":3.19,"5":3.05,"6":2.91},"add":{"n":"Nketiah","tn":"CRY","pos":4,"mp":1.0,"rate":3.42,"mins":167,"starts":3,"ppg":2.3,"form":2.3,"xgi":0.91,"h":10.3,"news":"","fx":[[{"o":"IPS","h":1}],[{"o":"LEE","h":0}],[{"o":"NFO","h":1}]]},"drop":{"n":"David","tn":"BHA","pos":4,"mp":0.09,"h":0.9}},{"gain":5.28,"per":{"4":1.84,"5":1.7,"6":1.74},"add":{"n":"Awoniyi","tn":"COV","pos":4,"mp":0.67,"rate":3.2,"mins":180,"starts":2,"ppg":1.7,"form":1.7,"xgi":0.64,"h":6.4,"news":"","fx":[[{"o":"BHA","h":1}],[{"o":"NFO","h":0}],[{"o":"NEW","h":1}]]},"drop":{"n":"David","tn":"BHA","pos":4,"mp":0.09,"h":0.9}}],"squad":[{"n":"Mendy","tn":"HUL","pos":2,"mp":1.0,"rate":4.31,"mins":191,"starts":3,"ppg":8.0,"form":8.0,"xgi":0.15,"h":13.2,"news":"","proj":[4.16,4.58,4.46],"fx":[[{"o":"CHE","h":0}],[{"o":"NEW","h":0}],[{"o":"EVE","h":1}]]},{"n":"Gibbs-White","tn":"NFO","pos":3,"mp":1.0,"rate":4.08,"mins":270,"starts":3,"ppg":6.0,"form":6.0,"xgi":0.5,"h":12.4,"news":"","proj":[4.01,4.11,4.28],"fx":[[{"o":"AVL","h":0}],[{"o":"COV","h":1}],[{"o":"CRY","h":0}]]},{"n":"Elanga","tn":"NEW","pos":3,"mp":1.0,"rate":3.96,"mins":232,"starts":3,"ppg":6.0,"form":6.0,"xgi":0.29,"h":12.0,"news":"","proj":[3.96,4.02,3.98],"fx":[[{"o":"LEE","h":0}],[{"o":"HUL","h":1}],[{"o":"COV","h":0}]]},{"n":"Stach","tn":"LEE","pos":3,"mp":1.0,"rate":3.99,"mins":270,"starts":3,"ppg":6.3,"form":6.3,"xgi":0.22,"h":11.9,"news":"","proj":[4.08,4.18,3.64],"fx":[[{"o":"NEW","h":1}],[{"o":"CRY","h":1}],[{"o":"ARS","h":0}]]},{"n":"Barry","tn":"EVE","pos":4,"mp":1.0,"rate":3.84,"mins":237,"starts":3,"ppg":4.0,"form":4.0,"xgi":0.92,"h":11.8,"news":"","proj":[3.92,3.97,3.89],"fx":[[{"o":"TOT","h":0}],[{"o":"IPS","h":1}],[{"o":"HUL","h":0}]]},{"n":"Semenyo","tn":"MCI","pos":3,"mp":1.0,"rate":3.59,"mins":270,"starts":3,"ppg":4.3,"form":4.3,"xgi":0.37,"h":10.7,"news":"","proj":[3.55,3.54,3.6],"fx":[[{"o":"MUN","h":0}],[{"o":"SUN","h":1}],[{"o":"LIV","h":0}]]},{"n":"Rúben","tn":"MCI","pos":2,"mp":1.0,"rate":3.25,"mins":270,"starts":3,"ppg":3.3,"form":3.3,"xgi":0.28,"h":9.3,"news":"","proj":[2.89,3.28,3.16],"fx":[[{"o":"MUN","h":0}],[{"o":"SUN","h":1}],[{"o":"LIV","h":0}]]},{"n":"Hill","tn":"BOU","pos":2,"mp":1.0,"rate":2.92,"mins":270,"starts":3,"ppg":2.0,"form":2.0,"xgi":0.25,"h":8.3,"news":"","proj":[2.69,2.84,2.81],"fx":[[{"o":"BRE","h":1}],[{"o":"LIV","h":1}],[{"o":"CHE","h":0}]]},{"n":"Henderson","tn":"CRY","pos":1,"mp":1.0,"rate":2.55,"mins":270,"starts":3,"ppg":1.7,"form":1.7,"xgi":0.0,"h":7.7,"news":"","proj":[2.56,2.57,2.61],"fx":[[{"o":"IPS","h":1}],[{"o":"LEE","h":0}],[{"o":"NFO","h":1}]]},{"n":"Suzuki","tn":"AVL","pos":1,"mp":0.67,"rate":3.29,"mins":180,"starts":2,"ppg":6.0,"form":4.0,"xgi":0.0,"h":6.6,"news":"","proj":[2.24,2.35,2.02],"fx":[[{"o":"NFO","h":1}],[{"o":"TOT","h":0}],[{"o":"BRE","h":1}]]},{"n":"Solanke","tn":"TOT","pos":4,"mp":0.16,"rate":3.4,"mins":43,"starts":0,"ppg":1.0,"form":1.0,"xgi":0.92,"h":1.6,"news":"","proj":[0.54,0.53,0.54],"fx":[[{"o":"EVE","h":1}],[{"o":"AVL","h":1}],[{"o":"MUN","h":0}]]},{"n":"Hincapie","tn":"ARS","pos":2,"mp":0.12,"rate":3.2,"mins":32,"starts":0,"ppg":1.0,"form":0.7,"xgi":0.0,"h":1.1,"news":"","proj":[0.38,0.34,0.38],"fx":[[{"o":"SUN","h":0}],[{"o":"BHA","h":0}],[{"o":"LEE","h":1}]]},{"n":"Madueke","tn":"ARS","pos":3,"mp":0.09,"rate":3.3,"mins":23,"starts":0,"ppg":1.0,"form":0.7,"xgi":0.2,"h":0.9,"news":"","proj":[0.28,0.29,0.28],"fx":[[{"o":"SUN","h":0}],[{"o":"BHA","h":0}],[{"o":"LEE","h":1}]]},{"n":"David","tn":"BHA","pos":4,"mp":0.09,"rate":3.4,"mins":23,"starts":0,"ppg":0.5,"form":0.3,"xgi":1.64,"h":0.9,"news":"","proj":[0.29,0.27,0.29],"fx":[[{"o":"COV","h":0}],[{"o":"ARS","h":1}],[{"o":"SUN","h":0}]]},{"n":"Diomande","tn":"NFO","pos":2,"mp":0.0,"rate":3.2,"mins":1,"starts":0,"ppg":1.0,"form":0.3,"xgi":0.0,"h":0.0,"news":"","proj":[0.01,0.01,0.01],"fx":[[{"o":"AVL","h":0}],[{"o":"COV","h":1}],[{"o":"CRY","h":0}]]}]}</script>
+<script type="application/json" id="seedData">{"v":1,"generated":"2026-09-11T16:20:33Z","leagueId":27214,"leagueName":"Paisley & District Draft","entryId":141674,"teamName":"Team Name","manager":"David Struthers","gwPlayed":3,"gwFinished":true,"nextEvent":4,"EV":[4,5,6],"deadline":"2026-09-12T12:30:00Z","baseline":131.5,"baseGW":{"4":43.6,"5":44.7,"6":43.2},"teamCodes":{"ARS":3,"AVL":7,"BOU":91,"BRE":94,"BHA":36,"CHE":8,"COV":9,"CRY":31,"EVE":11,"FUL":54,"HUL":88,"IPS":40,"LEE":2,"LIV":14,"MCI":43,"MUN":1,"NEW":4,"NFO":17,"TOT":6,"SUN":56},"claims":[{"gain":2.36,"per":{"4":0.45,"5":0.97,"6":0.94},"add":{"n":"Egan","tn":"HUL","pos":2,"mp":1.0,"rate":4.14,"mins":270,"starts":3,"ppg":7.7,"form":7.7,"xgi":0.0,"h":12.7,"news":"","proj":[3.99,4.4,4.29],"fx":[[{"o":"CHE","h":0}],[{"o":"NEW","h":0}],[{"o":"EVE","h":1}]]},"drop":{"n":"Hill","tn":"BOU","pos":2,"mp":1.0,"h":8.3}},{"gain":1.77,"per":{"4":0.57,"5":0.53,"6":0.67},"add":{"n":"King","tn":"FUL","pos":3,"mp":1.0,"rate":4.11,"mins":270,"starts":3,"ppg":6.3,"form":6.3,"xgi":0.43,"h":12.5,"news":"","proj":[4.12,4.07,4.27],"fx":[[{"o":"LIV","h":0}],[{"o":"MUN","h":1}],[{"o":"IPS","h":0}]]},"drop":{"n":"Semenyo","tn":"MCI","pos":3,"mp":1.0,"h":10.7}},{"gain":1.75,"per":{"4":0.26,"5":0.76,"6":0.73},"add":{"n":"Giles","tn":"HUL","pos":2,"mp":1.0,"rate":3.94,"mins":264,"starts":3,"ppg":6.7,"form":6.7,"xgi":0.07,"h":12.1,"news":"","proj":[3.8,4.19,4.08],"fx":[[{"o":"CHE","h":0}],[{"o":"NEW","h":0}],[{"o":"EVE","h":1}]]},"drop":{"n":"Rúben","tn":"MCI","pos":2,"mp":1.0,"h":9.3}},{"gain":1.73,"per":{"4":0.67,"5":0.54,"6":0.52},"add":{"n":"Janelt","tn":"BRE","pos":3,"mp":1.0,"rate":4.19,"mins":270,"starts":3,"ppg":7.0,"form":7.0,"xgi":0.27,"h":12.4,"news":"","proj":[4.22,4.08,4.12],"fx":[[{"o":"BOU","h":0}],[{"o":"CHE","h":1}],[{"o":"AVL","h":0}]]},"drop":{"n":"Semenyo","tn":"MCI","pos":3,"mp":1.0,"h":10.7}},{"gain":0.92,"per":{"4":0.3,"5":0.37,"6":0.25},"add":{"n":"N.Williams","tn":"NFO","pos":2,"mp":1.0,"rate":3.56,"mins":270,"starts":3,"ppg":5.0,"form":5.0,"xgi":0.12,"h":11.2,"news":"","proj":[3.84,3.8,3.6],"fx":[[{"o":"AVL","h":0}],[{"o":"COV","h":1}],[{"o":"CRY","h":0}]]},"drop":{"n":"Rúben","tn":"MCI","pos":2,"mp":1.0,"h":9.3}}],"squad":[{"n":"Ajayi","tn":"HUL","pos":2,"mp":1.0,"rate":4.41,"mins":243,"starts":3,"ppg":8.3,"form":8.3,"xgi":0.19,"h":13.5,"news":"","proj":[4.25,4.69,4.57],"fx":[[{"o":"CHE","h":0}],[{"o":"NEW","h":0}],[{"o":"EVE","h":1}]]},{"n":"Bogle","tn":"LEE","pos":2,"mp":1.0,"rate":4.3,"mins":217,"starts":3,"ppg":7.3,"form":7.3,"xgi":0.39,"h":13.2,"news":"","proj":[4.57,4.35,4.25],"fx":[[{"o":"NEW","h":1}],[{"o":"CRY","h":1}],[{"o":"ARS","h":0}]]},{"n":"Mendy","tn":"HUL","pos":2,"mp":1.0,"rate":4.31,"mins":191,"starts":3,"ppg":8.0,"form":8.0,"xgi":0.15,"h":13.2,"news":"","proj":[4.16,4.58,4.46],"fx":[[{"o":"CHE","h":0}],[{"o":"NEW","h":0}],[{"o":"EVE","h":1}]]},{"n":"Scott","tn":"BOU","pos":3,"mp":1.0,"rate":4.4,"mins":266,"starts":3,"ppg":8.0,"form":8.0,"xgi":0.21,"h":13.0,"news":"","proj":[4.32,4.41,4.29],"fx":[[{"o":"BRE","h":1}],[{"o":"LIV","h":1}],[{"o":"CHE","h":0}]]},{"n":"Gibbs-White","tn":"NFO","pos":3,"mp":1.0,"rate":4.08,"mins":270,"starts":3,"ppg":6.0,"form":6.0,"xgi":0.5,"h":12.4,"news":"","proj":[4.01,4.1,4.28],"fx":[[{"o":"AVL","h":0}],[{"o":"COV","h":1}],[{"o":"CRY","h":0}]]},{"n":"Stach","tn":"LEE","pos":3,"mp":1.0,"rate":3.99,"mins":270,"starts":3,"ppg":6.3,"form":6.3,"xgi":0.22,"h":11.9,"news":"","proj":[4.09,4.18,3.64],"fx":[[{"o":"NEW","h":1}],[{"o":"CRY","h":1}],[{"o":"ARS","h":0}]]},{"n":"Elanga","tn":"NEW","pos":3,"mp":1.0,"rate":3.96,"mins":232,"starts":3,"ppg":6.0,"form":6.0,"xgi":0.29,"h":11.9,"news":"","proj":[3.96,4.01,3.98],"fx":[[{"o":"LEE","h":0}],[{"o":"HUL","h":1}],[{"o":"COV","h":0}]]},{"n":"Barry","tn":"EVE","pos":4,"mp":1.0,"rate":3.85,"mins":237,"starts":3,"ppg":4.0,"form":4.0,"xgi":0.92,"h":11.8,"news":"","proj":[3.93,3.98,3.89],"fx":[[{"o":"TOT","h":0}],[{"o":"IPS","h":1}],[{"o":"HUL","h":0}]]},{"n":"Semenyo","tn":"MCI","pos":3,"mp":1.0,"rate":3.59,"mins":270,"starts":3,"ppg":4.3,"form":4.3,"xgi":0.37,"h":10.7,"news":"","proj":[3.55,3.54,3.6],"fx":[[{"o":"MUN","h":0}],[{"o":"SUN","h":1}],[{"o":"LIV","h":0}]]},{"n":"Nketiah","tn":"CRY","pos":4,"mp":1.0,"rate":3.43,"mins":167,"starts":3,"ppg":2.3,"form":2.3,"xgi":0.91,"h":10.3,"news":"","proj":[3.54,3.43,3.35],"fx":[[{"o":"IPS","h":1}],[{"o":"LEE","h":0}],[{"o":"NFO","h":1}]]},{"n":"Suzuki","tn":"AVL","pos":1,"mp":0.97,"rate":3.29,"mins":180,"starts":2,"ppg":6.0,"form":4.0,"xgi":0.0,"h":9.6,"news":"","proj":[3.26,3.42,2.94],"fx":[[{"o":"NFO","h":1}],[{"o":"TOT","h":0}],[{"o":"BRE","h":1}]]},{"n":"Rúben","tn":"MCI","pos":2,"mp":1.0,"rate":3.25,"mins":270,"starts":3,"ppg":3.3,"form":3.3,"xgi":0.28,"h":9.3,"news":"","proj":[2.89,3.28,3.16],"fx":[[{"o":"MUN","h":0}],[{"o":"SUN","h":1}],[{"o":"LIV","h":0}]]},{"n":"Hill","tn":"BOU","pos":2,"mp":1.0,"rate":2.91,"mins":270,"starts":3,"ppg":2.0,"form":2.0,"xgi":0.25,"h":8.3,"news":"","proj":[2.68,2.83,2.81],"fx":[[{"o":"BRE","h":1}],[{"o":"LIV","h":1}],[{"o":"CHE","h":0}]]},{"n":"Henderson","tn":"CRY","pos":1,"mp":1.0,"rate":2.55,"mins":270,"starts":3,"ppg":1.7,"form":1.7,"xgi":0.0,"h":7.7,"news":"","proj":[2.56,2.56,2.61],"fx":[[{"o":"IPS","h":1}],[{"o":"LEE","h":0}],[{"o":"NFO","h":1}]]},{"n":"Solanke","tn":"TOT","pos":4,"mp":0.12,"rate":3.4,"mins":43,"starts":0,"ppg":1.0,"form":1.0,"xgi":0.92,"h":1.2,"news":"","proj":[0.41,0.4,0.4],"fx":[[{"o":"EVE","h":1}],[{"o":"AVL","h":1}],[{"o":"MUN","h":0}]]}],"opponents":[{"ev":4,"name":"AVERAGE","manager":"","average":true,"proj":39.1,"mine":43.6,"margin":4.5,"shape":null,"xi":[],"bench":[],"note":"the dummy side, scored as the league's mean eleven"},{"ev":5,"name":"JACKS EGGS","manager":"Jack Docherty","average":false,"proj":38.6,"mine":44.7,"margin":6.1,"shape":"5-3-2","xi":[{"n":"Sels","tn":"NFO","pos":1,"mp":1.0,"proj":3.06,"fx":[{"o":"COV","h":1}]},{"n":"Gvardiol","tn":"MCI","pos":2,"mp":1.0,"proj":4.15,"fx":[{"o":"SUN","h":1}]},{"n":"Mitchell","tn":"CRY","pos":2,"mp":1.0,"proj":3.8,"fx":[{"o":"LEE","h":0}]},{"n":"White","tn":"ARS","pos":2,"mp":1.0,"proj":3.59,"fx":[{"o":"BHA","h":0}]},{"n":"Kerkez","tn":"LIV","pos":2,"mp":1.0,"proj":2.82,"fx":[{"o":"BOU","h":0}]},{"n":"Truffert","tn":"BOU","pos":2,"mp":1.0,"proj":2.63,"fx":[{"o":"LIV","h":1}]},{"n":"Lewis-Potter","tn":"BRE","pos":3,"mp":1.0,"proj":4.02,"fx":[{"o":"CHE","h":1}]},{"n":"Barnes","tn":"NEW","pos":3,"mp":1.0,"proj":3.82,"fx":[{"o":"HUL","h":1}]},{"n":"Wirtz","tn":"LIV","pos":3,"mp":1.0,"proj":3.29,"fx":[{"o":"BOU","h":0}]},{"n":"Haaland","tn":"MCI","pos":4,"mp":1.0,"proj":4.81,"fx":[{"o":"SUN","h":1}]},{"n":"Marmoush","tn":"TOT","pos":4,"mp":0.86,"proj":2.57,"fx":[{"o":"AVL","h":1}]}],"bench":[{"n":"Roefs","tn":"SUN","pos":1,"mp":1.0,"proj":2.64,"fx":[{"o":"MCI","h":0}]},{"n":"Foden","tn":"MCI","pos":3,"mp":0.57,"proj":2.12,"fx":[{"o":"SUN","h":1}]},{"n":"Enzo","tn":"MCI","pos":3,"mp":0.57,"proj":1.75,"fx":[{"o":"SUN","h":1}]},{"n":"Strand Larsen","tn":"CRY","pos":4,"mp":0.53,"proj":1.66,"fx":[{"o":"LEE","h":0}]}]},{"ev":6,"name":"Liv Laugh Lavia","manager":"Ross Skinner","average":false,"proj":39.6,"mine":43.2,"margin":3.6,"shape":"3-4-3","xi":[{"n":"Trafford","tn":"LEE","pos":1,"mp":1.0,"proj":3.32,"fx":[{"o":"ARS","h":0}]},{"n":"Justin","tn":"LEE","pos":2,"mp":1.0,"proj":3.55,"fx":[{"o":"ARS","h":0}]},{"n":"Botman","tn":"NEW","pos":2,"mp":1.0,"proj":3.24,"fx":[{"o":"COV","h":0}]},{"n":"Matheus N.","tn":"MCI","pos":2,"mp":1.0,"proj":3.11,"fx":[{"o":"LIV","h":0}]},{"n":"Ødegaard","tn":"ARS","pos":3,"mp":1.0,"proj":4.77,"fx":[{"o":"LEE","h":1}]},{"n":"Cherki","tn":"MCI","pos":3,"mp":0.86,"proj":3.92,"fx":[{"o":"LIV","h":0}]},{"n":"Grealish","tn":"EVE","pos":3,"mp":1.0,"proj":3.34,"fx":[{"o":"HUL","h":0}]},{"n":"Anderson","tn":"MCI","pos":3,"mp":1.0,"proj":3.16,"fx":[{"o":"LIV","h":0}]},{"n":"Isak","tn":"LIV","pos":4,"mp":1.0,"proj":4.55,"fx":[{"o":"MCI","h":1}]},{"n":"Gonzalo","tn":"FUL","pos":4,"mp":1.0,"proj":3.59,"fx":[{"o":"IPS","h":0}]},{"n":"Brobbey","tn":"SUN","pos":4,"mp":1.0,"proj":3.09,"fx":[{"o":"BHA","h":1}]}],"bench":[{"n":"Martinez","tn":"CHE","pos":1,"mp":0.97,"proj":2.71,"fx":[{"o":"BOU","h":1}]},{"n":"Frimpong","tn":"LIV","pos":2,"mp":0.43,"proj":1.03,"fx":[{"o":"MCI","h":1}]},{"n":"J.Timber","tn":"ARS","pos":2,"mp":0.25,"proj":0.8,"fx":[{"o":"LEE","h":1}]},{"n":"Mbaye","tn":"AVL","pos":3,"mp":0.0,"proj":0.0,"fx":[{"o":"BRE","h":1}]}]}],"pool":{"total":656,"owned":135,"free":521,"considered":170}}</script>
 
 <script type="text/plain" id="fetchScript">
 /* ---- The Waiver Wire · refresh ------------------------------------------
@@ -516,6 +568,29 @@ code.k{font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:
     api('game')
   ]);
 
+  /* --- per-gameweek history --------------------------------------------
+     One call per gameweek covers every player. Needed so that "not yet" can
+     be told apart from "not any more": a keeper signed last month who sat
+     out his first gameweek and has started every one since has the same
+     season average as someone who has just been dropped. */
+  const HIST = {};
+  const firstGw = Math.max((G.current_event || 1) - CFG.recencyWindow + 1, 1);
+  for (let gw = firstGw; gw <= (G.current_event || 0); gw++){
+    let live;
+    try { live = (await api('event/' + gw + '/live')).elements || {}; }
+    catch (err) { log('no history for GW' + gw); continue; }
+    // only players present in this gameweek's payload. The list grows as
+    // players are registered, so a mid-season signing is simply absent from
+    // earlier weeks - recording those as zeros would mark him down for games
+    // he could not have played.
+    for (const pid of Object.keys(live)){
+      const st = (live[pid] || {}).stats || {};
+      const slot = HIST[pid] = HIST[pid] || {starts:[], minutes:[]};
+      slot.starts.push(st.starts || 0);
+      slot.minutes.push(st.minutes || 0);
+    }
+  }
+
   const GWP = G.current_event || 1;
   const EV  = Object.keys(B.fixtures).map(Number).sort((a,b) => a - b);
   if (!EV.length) { log('no upcoming fixtures published yet'); return; }
@@ -527,6 +602,11 @@ code.k{font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:
     xgi:{1:4.0, 2:5.0, 3:4.5, 4:4.0},           // points per xGI, by position
     app:2.0,                                    // appearance points
     k:5,                                        // shrinkage: starts to trust a rate
+    recencyWindow:5, recencyDecay:0.5,          // per-gameweek history weighting
+    // Keepers decay far faster: the position is close to binary, so a keeper
+    // who has started the last two games is the number one and what happened
+    // before the change tells you little. Outfielders are genuinely rotated.
+    recencyDecayByPos:{1:0.20, 2:0.50, 3:0.50, 4:0.50},
     base:{1:3.0, 2:3.2, 3:3.3, 4:3.4},          // baseline a thin sample is pulled to
     swing:{1:.35, 2:.35, 3:.22, 4:.18},         // how much fixtures move each position
     doubt:.5,                                   // flagged doubtful, no percentage given
@@ -580,11 +660,26 @@ code.k{font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:
       xgi: per90 ? +(xgi / per90).toFixed(2) : 0,
       status:e.status, chance:e.chance_of_playing_next_round, news:e.news || ''
     };
-    // start probability: hard flags first, else minutes actually given
+    // start probability: hard flags first, then weighted per-gameweek history.
+    // Starts drive it, not minutes - a striker who starts every week and is
+    // replaced on the hour is a certain starter, not a 60% one. Minutes are
+    // kept as a floor so regular substitutes are not valued at nothing.
+    const h = HIST[e.id];
     if (['i','s','u'].includes(p.status)) p.mp = 0;
     else if (p.chance !== null && p.chance !== undefined) p.mp = p.chance / 100;
     else {
-      p.mp = Math.min(Math.max(p.starts / GWP, p.mins / (90 * GWP)), 1);
+      if (h && h.starts.length){
+        const n = h.starts.length;
+        const dec = CFG.recencyDecayByPos[p.pos] || CFG.recencyDecay;
+        const w = h.starts.map((_,i) => Math.pow(dec, n - 1 - i));
+        const tot = w.reduce((a,b) => a + b, 0);
+        const byStarts = w.reduce((a,x,i) => a + x * Math.min(h.starts[i], 1), 0) / tot;
+        const byMins = w.reduce((a,x,i) => a + x * Math.min(h.minutes[i] / 90, 1), 0) / tot;
+        p.mp = Math.max(byStarts, byMins);
+      } else {
+        p.mp = Math.max(p.starts / GWP, p.mins / (90 * GWP));
+      }
+      p.mp = Math.min(p.mp, 1);
       if (p.status === 'd') p.mp *= CFG.doubt;
     }
     p.mp = +p.mp.toFixed(2);
@@ -654,6 +749,58 @@ code.k{font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:
 
   const slim = p => ({n:p.n, tn:p.tn, pos:p.pos, mp:p.mp, rate:p.rate, mins:p.mins,
                       starts:p.starts, ppg:p.ppg, form:p.form, xgi:p.xgi, h:p.h, news:p.news, fx:p.fx});
+
+  /* --- who you play, and the side they would field --------------------
+     League fixtures use `league_entry` ids, which are NOT the `entry_id`
+     used for ownership, so the two are mapped through league_entries.
+     A league with an odd number of managers carries a dummy AVERAGE side;
+     it has no squad, so it is scored as the league's mean eleven. */
+  const byLE = {}; D.league_entries.forEach(e => byLE[e.id] = e);
+  const myLE = (D.league_entries.find(e => e.entry_id === ENTRY_ID) || {}).id;
+  const realEntries = D.league_entries.filter(e => e.entry_id);
+  const squadOf = id => P.filter(p => p.own === id);
+
+  const sideFor = (sq, i) => {
+    const bp = {1:[],2:[],3:[],4:[]};
+    sq.forEach(p => bp[p.pos].push(p));
+    for (const k in bp) bp[k].sort((a,b) => b.proj[EV[i]] - a.proj[EV[i]]);
+    if (!bp[1].length) return null;
+    let best = null;
+    for (const [d,m,f] of FORMS){
+      if (bp[2].length < d || bp[3].length < m || bp[4].length < f) continue;
+      const xi = bp[1].slice(0,1).concat(bp[2].slice(0,d), bp[3].slice(0,m), bp[4].slice(0,f));
+      const v = xi.reduce((a,p) => a + p.proj[EV[i]], 0);
+      if (!best || v > best.v) best = {v, shape: d+'-'+m+'-'+f, xi};
+    }
+    if (!best) return null;
+    const chosen = new Set(best.xi);
+    const bench = sq.filter(p => !chosen.has(p))
+      .sort((a,b) => (a.pos !== 1) - (b.pos !== 1) || b.proj[EV[i]] - a.proj[EV[i]]);
+    const one = p => ({n:p.n, tn:p.tn, pos:p.pos, mp:p.mp, proj:p.proj[EV[i]], fx:p.fx[i]});
+    return {total:+best.v.toFixed(1), shape:best.shape, xi:best.xi.map(one), bench:bench.map(one)};
+  };
+
+  const leagueMean = EV.map((ev,i) => {
+    const t = realEntries.map(e => { const s = sideFor(squadOf(e.entry_id), i); return s ? s.total : 0; })
+                         .filter(x => x > 0);
+    return t.length ? +(t.reduce((a,b) => a+b, 0) / t.length).toFixed(1) : 0;
+  });
+
+  const opponents = EV.map((ev,i) => {
+    const mine = baseGW[ev];
+    const m = (D.matches || []).find(x => x.event === ev && (x.league_entry_1 === myLE || x.league_entry_2 === myLE));
+    if (!m) return {ev, none:true, mine};
+    const otherLE = m.league_entry_1 === myLE ? m.league_entry_2 : m.league_entry_1;
+    const e = byLE[otherLE] || {};
+    if (!e.entry_id){
+      return {ev, name:'AVERAGE', manager:'', average:true, proj:leagueMean[i], mine,
+              margin:+(mine - leagueMean[i]).toFixed(1), shape:null, xi:[], bench:[]};
+    }
+    const side = sideFor(squadOf(e.entry_id), i) || {total:0, shape:'-', xi:[], bench:[]};
+    return {ev, name:e.entry_name, manager:((e.player_first_name||'')+' '+(e.player_last_name||'')).trim(),
+            average:false, proj:side.total, mine, margin:+(mine - side.total).toFixed(1),
+            shape:side.shape, xi:side.xi, bench:side.bench};
+  });
   const me = D.league_entries.find(e => e.entry_id === ENTRY_ID) || {};
   const evData = (B.events && B.events.data) || [];
   const dl = evData.find ? evData.find(e => e.id === EV[0]) : null;
@@ -671,6 +818,7 @@ code.k{font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:
     gwPlayed:GWP, nextEvent:G.next_event, EV,
     deadline: dl ? dl.deadline_time : null,
     baseline, baseGW,
+    opponents,
     claims: claims.map(c => ({gain:c.gain, per:c.per, add:slim(c.add),
                               drop:{n:c.drop.n, tn:c.drop.tn, pos:c.drop.pos, mp:c.drop.mp, h:c.drop.h}})),
     // squad rows carry the per-gameweek split as well, so the Best XI tab can
@@ -729,7 +877,8 @@ function badge(tn, cls){
     'alt="" onerror="this.style.display=\'none\'">';
 }
 
-const S = {data:null, tab:'claims', open:null, horizon:0, minGain:0.4, xiGw:null, xiView:'pitch'};
+const S = {data:null, tab:'claims', open:null, horizon:0, minGain:0.4, xiGw:null, xiView:'pitch',
+           oppGw:null, oppView:'pitch'};
 
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
@@ -746,6 +895,19 @@ function seed(){
   try { return JSON.parse(document.getElementById('seedData').textContent); }
   catch(e){ return null; }
 }
+const stamp = d => d && d.generated ? (Date.parse(d.generated) || 0) : 0;
+
+// Three possible sources, newest wins: whatever the scheduled job last
+// published, anything pasted in by hand, and the copy baked into this file.
+// The fetch fails harmlessly when the page is opened from disk.
+async function fetchPublished(){
+  try {
+    const r = await fetch('waivers.json?ts=' + Date.now(), {cache:'no-store'});
+    if (!r.ok) return null;
+    const j = await r.json();
+    return (j && Array.isArray(j.claims) && Array.isArray(j.squad)) ? j : null;
+  } catch(e){ return null; }
+}
 function load(){
   let stored = null;
   try {
@@ -753,7 +915,6 @@ function load(){
     if (raw) stored = JSON.parse(raw);
   } catch(e){}
   const s = seed();
-  const stamp = d => d && d.generated ? (Date.parse(d.generated) || 0) : 0;
   S.data = [stored, s].filter(Boolean).sort((a,b) => stamp(b) - stamp(a))[0] || null;
   try {
     const st = JSON.parse(localStorage.getItem(LS + '.set') || '{}');
@@ -838,7 +999,7 @@ function xiIndex(){
 /* ---------- render ---------- */
 function render(){
   renderHeader(); renderRefresh(); renderBanner();
-  renderClaims(); renderDead(); renderKpis(); renderXI(); renderSquad(); renderMethod(); renderFresh();
+  renderClaims(); renderDead(); renderKpis(); renderXI(); renderOpp(); renderSquad(); renderMethod(); renderFresh();
   $('#setHorizon').value = String(S.horizon);
   $('#setMin').value = String(S.minGain);
   $('#evCount').textContent = String(((S.data && S.data.EV) || []).length);
@@ -1018,8 +1179,11 @@ function shirt(p){
 }
 
 function pcard(p, ix){
-  const v = projAt(p, ix);
-  const games = (p.fx && p.fx[ix]) || [];
+  // squad players carry an array of projections and fixtures, one per
+  // gameweek; opponent players are already resolved to a single gameweek
+  const single = typeof p.proj === 'number';
+  const v = single ? p.proj : projAt(p, ix);
+  const games = single ? (p.fx || []) : ((p.fx && p.fx[ix]) || []);
   const fx = games.length
     ? games.map(g => esc(g.o) + (g.h ? ' (H)' : ' (A)')).join(' + ')
     : 'blank';
@@ -1039,28 +1203,32 @@ function pcard(p, ix){
 // said, because the drawn markings are perfectly serviceable.
 const PL_PITCH = 'https://draft.premierleague.com/assets/pitch-default-CfeFC5Ls.svg';
 let plPitchOk = null;
-function tryPlPitch(){
-  if (plPitchOk !== null){ applyPlPitch(); return; }
+function tryPlPitch(sel){
+  if (plPitchOk !== null){ applyPlPitch(sel); return; }
   const img = new Image();
-  img.onload = () => { plPitchOk = true; applyPlPitch(); };
+  img.onload = () => { plPitchOk = true; applyPlPitch(sel); };
   img.onerror = () => { plPitchOk = false; };
   img.src = PL_PITCH;
 }
-function applyPlPitch(){
-  const el = $('#xiPitch');
-  if (!el || !plPitchOk) return;
-  el.classList.add('pl');
-  el.style.backgroundImage = 'url(' + PL_PITCH + ')';
+function applyPlPitch(sel){
+  if (!plPitchOk) return;
+  ['#xiPitch', '#oppPitch'].concat(sel ? [sel] : []).forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    el.classList.add('pl');
+    el.style.backgroundImage = 'url(' + PL_PITCH + ')';
+  });
 }
 
-function renderPitch(xi, bench, ix){
+function renderPitch(xi, bench, ix, pitchSel, benchSel){
   const rows = [1,2,3,4].map(pos => {
     const line = xi.filter(p => p.pos === pos);
     return '<div class="prow">' + line.map(p => pcard(p, ix)).join('') + '</div>';
   }).join('');
-  $('#xiPitch').innerHTML = PITCH_LINES + rows;
-  tryPlPitch();
-  $('#xiBench').innerHTML = '<span class="benchlab">Bench \u00b7 in the order they would come on</span>' +
+  $(pitchSel || '#xiPitch').innerHTML = PITCH_LINES + rows;
+  tryPlPitch(pitchSel || '#xiPitch');
+  $(benchSel || '#xiBench').innerHTML =
+    '<span class="benchlab">Bench \u00b7 in the order they would come on</span>' +
     bench.map(p => pcard(p, ix)).join('');
 }
 function applyXiView(){
@@ -1123,7 +1291,7 @@ function renderXI(){
       '<td class="num big">' + n1(projAt(p, ix)) + '</td></tr>').join('') + '</tbody>';
 
   const bench = benchOf(best.xi);
-  renderPitch(best.xi, bench, ix);
+  renderPitch(best.xi, bench, ix, '#xiPitch', '#xiBench');
   applyXiView();
   tB.innerHTML = '<thead><tr><th>Order</th><th>Player</th><th>Fixture</th><th>Playing</th><th class="num">Proj</th></tr></thead><tbody>' +
     bench.map((p,i) =>
@@ -1139,6 +1307,101 @@ function renderXI(){
       '<td class="big">' + o.name + '</td>' +
       '<td class="num big">' + n1(o.total) + '</td>' +
       '<td class="num">' + (i === 0 ? '\u2014' : '\u2212' + n1(best.total - o.total)) + '</td></tr>').join('') + '</tbody>';
+}
+
+function oppFor(ev){
+  const list = (S.data && S.data.opponents) || [];
+  return list.find(o => o.ev === ev) || null;
+}
+
+function renderOpp(){
+  const all = evs();
+  const sel = $('#oppGw');
+  if (S.oppGw == null || all.indexOf(S.oppGw) < 0) S.oppGw = all.length ? all[0] : null;
+  sel.innerHTML = all.length
+    ? all.map(ev => '<option value="' + ev + '">Gameweek ' + ev + '</option>').join('')
+    : '<option>\u2014</option>';
+  if (S.oppGw != null) sel.value = String(S.oppGw);
+
+  const o = S.oppGw != null ? oppFor(S.oppGw) : null;
+  const ban = $('#oppBanner');
+  const sideCard = $('#oppSideCard');
+
+  if (!o || o.none){
+    $('#oppNote').textContent = '';
+    $('#oppTitle').textContent = '\u2014';
+    $('#oppShape').textContent = '';
+    $('#oppScore').innerHTML = '<div class="empty" style="grid-column:1/-1"><b>No fixture</b>' +
+      (S.data && S.data.opponents ? 'Nothing scheduled for this gameweek.'
+       : 'This snapshot predates the Opponent tab. Refresh on the <b>Data</b> tab.') + '</div>';
+    ban.hidden = true; sideCard.hidden = true;
+    return;
+  }
+
+  $('#oppNote').textContent = 'GW' + o.ev;
+  $('#oppTitle').textContent = 'GW' + o.ev + ' \u00b7 ' + o.name;
+  $('#oppShape').textContent = o.shape ? ('They line up ' + o.shape) : '';
+
+  const ahead = o.margin > 0;
+  const mineCls = ahead ? 'lead' : 'trail';
+  const themCls = ahead ? 'trail' : 'lead';
+  $('#oppScore').innerHTML =
+    '<div class="tie-side"><div class="who2">' + esc(S.data.teamName || 'You') + '</div>' +
+      '<div class="mgr2">' + esc(S.data.manager || '') + '</div></div>' +
+    '<div class="tie-score"><span class="' + mineCls + '">' + n1(o.mine) + '</span>' +
+      '<span class="sep">\u2013</span><span class="' + themCls + '">' + n1(o.proj) + '</span></div>' +
+    '<div class="tie-side them"><div class="who2">' + esc(o.name) + '</div>' +
+      '<div class="mgr2">' + esc(o.manager || (o.average ? 'the app\u2019s dummy side' : '')) + '</div></div>' +
+    '<div class="tie-verdict">' + verdictText(o) + '</div>';
+
+  // A margin inside a couple of points is noise, and saying so is more use
+  // than a confident number. Roughly two points per gameweek is the level at
+  // which a single goal or clean sheet flips it.
+  const tight = Math.abs(o.margin) < 2;
+  ban.hidden = !(tight || o.average);
+  if (!ban.hidden){
+    ban.className = 'banner' + (tight ? ' warn' : '');
+    ban.innerHTML = o.average
+      ? '<b>This is the AVERAGE side.</b> With nine managers the app adds a dummy opponent so everyone gets a fixture. It has no squad, so its score here is the mean projected eleven across the league. Beating it is a real win.'
+      : '<b>Too close to call.</b> ' + n1(Math.abs(o.margin)) + ' points is inside the error on these projections \u2014 one goal or a clean sheet either way settles it.';
+  }
+
+  sideCard.hidden = !!o.average;
+  if (o.average) return;
+
+  $('#oppMeta').textContent = (o.manager || '') + ' \u00b7 projected ' + n1(o.proj);
+  renderPitch(o.xi, o.bench, 0, '#oppPitch', '#oppBench');
+  applyOppView();
+
+  $('#tblOpp').innerHTML = '<thead><tr><th>Pos</th><th>Player</th><th>Fixture</th><th>Playing</th><th class="num">Proj</th></tr></thead><tbody>' +
+    o.xi.map(p =>
+      '<tr><td><span class="pill d">' + POSSHORT[p.pos] + '</span></td>' +
+      '<td class="who"><span class="team">' + badge(p.tn) + esc(p.n) + '</span><span class="mgr">' + esc(p.tn) + '</span></td>' +
+      '<td>' + fxCell({fx:[p.fx]}, 0) + '</td><td>' + barCell(p.mp) + '</td>' +
+      '<td class="num big">' + n1(p.proj) + '</td></tr>').join('') +
+    '<tr><td colspan="5" style="background:var(--surface-2);font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;color:var(--muted);padding:6px 10px">Bench</td></tr>' +
+    o.bench.map(p =>
+      '<tr><td><span class="pill d">' + POSSHORT[p.pos] + '</span></td>' +
+      '<td class="who"><span class="team">' + badge(p.tn) + esc(p.n) + '</span><span class="mgr">' + esc(p.tn) + '</span></td>' +
+      '<td>' + fxCell({fx:[p.fx]}, 0) + '</td><td>' + barCell(p.mp) + '</td>' +
+      '<td class="num">' + n1(p.proj) + '</td></tr>').join('') + '</tbody>';
+}
+
+function verdictText(o){
+  const m = Math.abs(o.margin);
+  const who = o.margin > 0 ? 'You are' : 'They are';
+  if (m < 2) return '<b>Level.</b> ' + n1(m) + ' points between the sides, which is well inside the error on a projection like this.';
+  if (m < 5) return '<b>' + who + ' narrowly ahead</b> by ' + n1(m) + '. Close enough that one returning player decides it.';
+  if (m < 10) return '<b>' + who + ' ahead</b> by ' + n1(m) + ' points on projection.';
+  return '<b>' + who + ' well ahead</b> by ' + n1(m) + '. A comfortable projection, which usually means the other side has players who are not starting.';
+}
+
+function applyOppView(){
+  const pitch = S.oppView === 'pitch';
+  $('#oppPitchWrap').hidden = !pitch;
+  $('#oppListWrap').hidden = pitch;
+  $('#oppViewPitch').setAttribute('aria-pressed', String(pitch));
+  $('#oppViewList').setAttribute('aria-pressed', String(!pitch));
 }
 
 function renderSquad(){
@@ -1252,7 +1515,23 @@ function switchTab(name){
   window.scrollTo({top:0, behavior:'instant'});
 }
 $$('.tab').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
-$('#refreshBtn').addEventListener('click', e => { e.preventDefault(); switchTab('data'); toast('Run the script, then paste the result.'); });
+$('#refreshBtn').addEventListener('click', async e => {
+  e.preventDefault();
+  const btn = $('#refreshBtn');
+  btn.classList.add('busy');
+  const pub = await fetchPublished();
+  btn.classList.remove('busy');
+  if (pub && stamp(pub) > stamp(S.data)){
+    S.data = pub; S.open = null; render();
+    toast('Updated.');
+  } else if (pub){
+    renderRefresh();
+    toast('Already up to date.');
+  } else {
+    switchTab('data');
+    toast('No published file here \u2014 run the script and paste instead.');
+  }
+});
 
 async function copyText(txt, okMsg){
   try { await navigator.clipboard.writeText(txt); toast(okMsg); return; } catch(e){}
@@ -1298,12 +1577,18 @@ $('#resetData').addEventListener('click', () => {
 $('#viewPitch').addEventListener('click', () => { S.xiView = 'pitch'; applyXiView(); });
 $('#viewList').addEventListener('click', () => { S.xiView = 'list'; applyXiView(); });
 $('#xiGw').addEventListener('change', e => { S.xiGw = Number(e.target.value); renderXI(); });
+$('#oppGw').addEventListener('change', e => { S.oppGw = Number(e.target.value); renderOpp(); });
+$('#oppViewPitch').addEventListener('click', () => { S.oppView = 'pitch'; applyOppView(); });
+$('#oppViewList').addEventListener('click', () => { S.oppView = 'list'; applyOppView(); });
 $('#setHorizon').addEventListener('change', e => { S.horizon = Number(e.target.value); S.open = null; saveSettings(); render(); });
 $('#setMin').addEventListener('change', e => { S.minGain = Number(e.target.value); S.open = null; saveSettings(); render(); });
 
 /* ---------- boot ---------- */
 load();
 render();
+fetchPublished().then(pub => {
+  if (pub && stamp(pub) > stamp(S.data)){ S.data = pub; S.open = null; render(); }
+});
 
 })();
 </script>
